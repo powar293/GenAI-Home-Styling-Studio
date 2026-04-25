@@ -1,0 +1,226 @@
+import os, json, uuid
+import requests as http_req
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+
+from config import Config
+from models import db, User, Design, Furniture, Booking
+from ai_engine import analyze_room, buddy_chat
+
+app = Flask(__name__)
+app.config.from_object(Config)
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+db.init_app(app)
+
+login_manager = LoginManager(app)
+login_manager.login_view = 'auth_page'
+
+ALLOWED = {'png', 'jpg', 'jpeg', 'webp'}
+
+@login_manager.user_loader
+def load_user(uid):
+    return User.query.get(int(uid))
+
+def allowed(fn):
+    return '.' in fn and fn.rsplit('.', 1)[1].lower() in ALLOWED
+
+# ── Pages ────────────────────────────────────────────────────────────────────
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/auth')
+def auth_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    return render_template('auth.html')
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    designs = Design.query.filter_by(user_id=current_user.id).order_by(Design.created_at.desc()).limit(6).all()
+    bookings_count = Booking.query.filter_by(user_id=current_user.id).count()
+    designs_count = Design.query.filter_by(user_id=current_user.id).count()
+    return render_template('dashboard.html', designs=designs,
+                           bookings_count=bookings_count, designs_count=designs_count)
+
+@app.route('/design')
+@login_required
+def design_page():
+    styles = ['Modern', 'Classic', 'Minimal', 'Bohemian', 'Industrial', 'Scandinavian']
+    return render_template('design.html', styles=styles)
+
+@app.route('/ar')
+@login_required
+def ar_page():
+    furniture_list = Furniture.query.all()
+    return render_template('ar.html', furniture_list=furniture_list)
+
+@app.route('/buddy')
+@login_required
+def buddy_page():
+    return render_template('buddy.html')
+
+@app.route('/bookings')
+@login_required
+def bookings_page():
+    user_bookings = (Booking.query
+                     .filter_by(user_id=current_user.id)
+                     .order_by(Booking.created_at.desc()).all())
+    return render_template('bookings.html', bookings=user_bookings)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
+# ── Auth API ─────────────────────────────────────────────────────────────────
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    d = request.get_json()
+    username, email, password = d.get('username','').strip(), d.get('email','').strip(), d.get('password','')
+    if not all([username, email, password]):
+        return jsonify(success=False, message='All fields are required.')
+    if User.query.filter_by(email=email).first():
+        return jsonify(success=False, message='Email already registered.')
+    user = User(username=username, email=email, password_hash=generate_password_hash(password))
+    db.session.add(user); db.session.commit()
+    login_user(user)
+    return jsonify(success=True, redirect='/dashboard')
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    d = request.get_json()
+    user = User.query.filter_by(email=d.get('email','').strip()).first()
+    if user and check_password_hash(user.password_hash, d.get('password','')):
+        login_user(user)
+        return jsonify(success=True, redirect='/dashboard')
+    return jsonify(success=False, message='Invalid email or password.')
+
+# ── Design / AI API ──────────────────────────────────────────────────────────
+
+@app.route('/api/analyze', methods=['POST'])
+@login_required
+def api_analyze():
+    style = request.form.get('style', 'modern')
+    image_path = None
+    if 'image' in request.files:
+        f = request.files['image']
+        if f and allowed(f.filename):
+            fname = f"{uuid.uuid4().hex}_{secure_filename(f.filename)}"
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
+            f.save(image_path)
+    suggestions = analyze_room(image_path, style)
+    design = Design(user_id=current_user.id, image_path=image_path or '',
+                    style=style, suggestions_json=json.dumps(suggestions))
+    db.session.add(design); db.session.commit()
+    return jsonify(success=True, design_id=design.id, suggestions=suggestions)
+
+# ── Buddy / Voice API ────────────────────────────────────────────────────────
+
+@app.route('/api/buddy/chat', methods=['POST'])
+@login_required
+def api_buddy_chat():
+    d = request.get_json()
+    message, lang, design_id = d.get('message',''), d.get('lang','en'), d.get('design_id')
+    result = buddy_chat(message, lang, current_user.id, design_id)
+    if result.get('intent') == 'book' and result.get('furniture_name'):
+        item = Furniture.query.filter(
+            Furniture.name.ilike(f"%{result['furniture_name']}%")).first()
+        if item:
+            bk = Booking(user_id=current_user.id, furniture_id=item.id,
+                         design_id=design_id, status='confirmed')
+            db.session.add(bk); db.session.commit()
+            result['booking_confirmed'] = True
+            result['furniture'] = {'id': item.id, 'name': item.name,
+                                   'price': item.price, 'image_url': item.image_url}
+    return jsonify(result)
+
+@app.route('/api/voice/stt', methods=['POST'])
+@login_required
+def api_stt():
+    lang = request.form.get('lang', 'en-IN')
+    if 'audio' not in request.files:
+        return jsonify(success=False, error='No audio file')
+    audio = request.files['audio']
+    try:
+        headers = {'api-subscription-key': Config.SARVAM_API_KEY}
+        files = {'file': (audio.filename or 'audio.wav', audio.stream,
+                          audio.content_type or 'audio/wav')}
+        data = {'model': 'saarika:v2', 'language_code': lang}
+        r = http_req.post('https://api.sarvam.ai/speech-to-text',
+                          headers=headers, files=files, data=data, timeout=30)
+        return jsonify(success=True, transcript=r.json().get('transcript', ''))
+    except Exception as e:
+        return jsonify(success=False, error=str(e))
+
+@app.route('/api/voice/tts', methods=['POST'])
+@login_required
+def api_tts():
+    d = request.get_json()
+    text, lang = d.get('text', ''), d.get('lang', 'en-IN')
+    speaker = {'hi-IN': 'meera', 'mr-IN': 'meera', 'en-IN': 'arvind'}.get(lang, 'meera')
+    try:
+        headers = {'api-subscription-key': Config.SARVAM_API_KEY,
+                   'Content-Type': 'application/json'}
+        payload = {'inputs': [text[:500]], 'target_language_code': lang,
+                   'speaker': speaker, 'pitch': 0, 'pace': 1.2,
+                   'loudness': 1.5, 'speech_sample_rate': 22050,
+                   'enable_preprocessing': True, 'model': 'bulbul:v1'}
+        r = http_req.post('https://api.sarvam.ai/text-to-speech',
+                          headers=headers, json=payload, timeout=30)
+        audios = r.json().get('audios', [''])
+        return jsonify(success=True, audio=audios[0])
+    except Exception as e:
+        return jsonify(success=False, error=str(e))
+
+# ── Booking API ──────────────────────────────────────────────────────────────
+
+@app.route('/api/book', methods=['POST'])
+@login_required
+def api_book():
+    d = request.get_json()
+    item = Furniture.query.get(d.get('furniture_id'))
+    if not item:
+        return jsonify(success=False, error='Furniture not found')
+    bk = Booking(user_id=current_user.id, furniture_id=item.id,
+                 design_id=d.get('design_id'), status='confirmed')
+    db.session.add(bk); db.session.commit()
+    return jsonify(success=True, booking_id=bk.id,
+                   message=f'✅ {item.name} booked successfully!')
+
+@app.route('/api/cancel-booking/<int:bid>', methods=['POST'])
+@login_required
+def cancel_booking(bid):
+    bk = Booking.query.filter_by(id=bid, user_id=current_user.id).first()
+    if not bk:
+        return jsonify(success=False, error='Booking not found')
+    bk.status = 'cancelled'; db.session.commit()
+    return jsonify(success=True)
+
+@app.route('/api/furniture')
+@login_required
+def api_furniture():
+    style = request.args.get('style', '')
+    q = Furniture.query
+    if style:
+        q = q.filter(Furniture.style_tags.ilike(f'%{style}%'))
+    items = q.all()
+    return jsonify([{'id': i.id, 'name': i.name, 'category': i.category,
+                     'price': i.price, 'image_url': i.image_url,
+                     'description': i.description} for i in items])
+
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True, port=5000)

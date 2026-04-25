@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Gruha Alankara – AI + AR Interior Design{% endblock %}
+{% block full_content %}
+<div class="landing">
+  <!-- Navbar -->
+  <nav class="landing-nav">
+    <div class="nav-brand">
+      <span class="brand-icon">🏠</span>
+      <span>Gruha <strong>Alankara</strong></span>
+    </div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How It Works</a>
+      <a href="/auth" class="btn-outline">Login</a>
+      <a href="/auth" class="btn-primary">Get Started</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-particles" id="particles"></div>
+    <div class="hero-content">
+      <div class="hero-badge">✨ AI + AR + Voice — All in One</div>
+      <h1 class="hero-title">Design Your Dream Home<br><span class="gradient-text">with AI Magic</span></h1>
+      <p class="hero-sub">Upload your room photo, get instant AI-powered furniture suggestions, visualise them in AR, and book — all through voice in Marathi, Hindi or English.</p>
+      <div class="hero-cta">
+        <a href="/auth" class="btn-hero">🚀 Start Designing Free</a>
+        <a href="#how" class="btn-ghost">▶ See How It Works</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num">6+</span><span>Design Styles</span></div>
+        <div class="stat"><span class="stat-num">20+</span><span>Furniture Items</span></div>
+        <div class="stat"><span class="stat-num">3</span><span>Languages</span></div>
+        <div class="stat"><span class="stat-num">AR</span><span>Visualisation</span></div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="room-card-anim">
+        <div class="room-card card-1">🛋️ Modern Sofa<br><small>₹45,000</small></div>
+        <div class="room-card card-2">💡 LED Lamp<br><small>₹5,500</small></div>
+        <div class="room-card card-3">🪑 Ergonomic Chair<br><small>₹22,000</small></div>
+        <div class="room-phone">
+          <div class="phone-screen">
+            <div class="phone-tag">AI Suggestions</div>
+            <div class="phone-item">✅ L-Shaped Sofa</div>
+            <div class="phone-item">✅ Glass Table</div>
+            <div class="phone-item">✅ Floor Lamp</div>
+            <div class="phone-mic">🎙️ बोलें / बोला / Speak</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything You Need to Design & Book</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🧠</div>
+        <h3>AI Room Analysis</h3>
+        <p>Upload your room photo and our Gemini-powered AI instantly suggests matching furniture, colour palettes and placement tips.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🥽</div>
+        <h3>AR Visualisation</h3>
+        <p>Place furniture virtually in your room using your live camera. Drag, resize, and see exactly how it looks before buying.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>AI Buddy Agent</h3>
+        <p>Chat or speak with Buddy in Marathi, Hindi or English. It suggests, explains, and books furniture automatically for you.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎙️</div>
+        <h3>Multilingual Voice</h3>
+        <p>Powered by Sarvam AI — speak in मराठी, हिंदी or English. Full speech-to-text and text-to-speech support.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📦</div>
+        <h3>One-Click Booking</h3>
+        <p>Book furniture directly from AI suggestions or AR mode. Track all your orders in the Bookings dashboard.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3>6 Design Styles</h3>
+        <p>Modern, Classic, Minimal, Bohemian, Industrial, Scandinavian — each with curated furniture and colour recommendations.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-section" id="how">
+    <div class="section-label">Workflow</div>
+    <h2 class="section-title">How Gruha Alankara Works</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><h4>Login / Register</h4><p>Create your free account in seconds.</p></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><div class="step-num">2</div><h4>Upload Room</h4><p>Photo upload or live camera capture.</p></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><div class="step-num">3</div><h4>Pick Style</h4><p>Choose from 6 curated design styles.</p></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><div class="step-num">4</div><h4>AI Analyses</h4><p>Gemini AI generates suggestions.</p></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><div class="step-num">5</div><h4>AR Preview</h4><p>See furniture in your actual room.</p></div>
+      <div class="step-arrow">→</div>
+      <div class="step"><div class="step-num">6</div><h4>Book via Buddy</h4><p>Voice-book furniture with AI Buddy.</p></div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-glow"></div>
+    <h2>Ready to Transform Your Home?</h2>
+    <p>Join thousands designing smarter with AI + AR.</p>
+    <a href="/auth" class="btn-hero">🏠 Start for Free</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <p>© 2024 Gruha Alankara · AI Interior Design Platform · Built with ❤️</p>
+  </footer>
+</div>
+
+<script>
+// Animated particles
+const container = document.getElementById('particles');
+for(let i=0;i<30;i++){
+  const p = document.createElement('div');
+  p.className='particle';
+  p.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${2+Math.random()*4}px;height:${2+Math.random()*4}px;animation-delay:${Math.random()*8}s;animation-duration:${6+Math.random()*6}s`;
+  container.appendChild(p);
+}
+</script>
+{% endblock %}

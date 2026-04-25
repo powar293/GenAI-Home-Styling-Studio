@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}AI Buddy – Gruha Alankara{% endblock %}
+{% block page_title %}AI Buddy{% endblock %}
+{% block content %}
+<div class="buddy-page">
+  <!-- Chat Window -->
+  <div class="chat-window">
+    <div class="chat-header">
+      <div class="buddy-avatar">🤖</div>
+      <div class="buddy-info">
+        <div class="buddy-name">Buddy</div>
+        <div class="buddy-status" id="buddy-status">● Online – Ready to help</div>
+      </div>
+      <div class="lang-selector">
+        <button class="lang-btn active" data-lang="en" data-sarvam="en-IN" onclick="setLang(this)">EN</button>
+        <button class="lang-btn" data-lang="hi" data-sarvam="hi-IN" onclick="setLang(this)">हिं</button>
+        <button class="lang-btn" data-lang="mr" data-sarvam="mr-IN" onclick="setLang(this)">मरा</button>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <!-- Welcome message -->
+      <div class="message bot-message">
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-body">
+          <div class="msg-text">Namaste! 🙏 I'm Buddy, your AI interior design assistant.<br>
+          I can suggest furniture, help you book items, and answer design questions.<br>
+          Try saying: <em>"Suggest a sofa for modern style"</em> or <em>"Book an LED lamp"</em></div>
+          <div class="msg-time">Just now</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Typing indicator -->
+    <div class="typing-indicator hidden" id="typing">
+      <div class="msg-avatar">🤖</div>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>
+
+    <!-- Input area -->
+    <div class="chat-input-area">
+      <div class="quick-chips">
+        <button class="chip" onclick="sendQuick('Suggest furniture for modern living room')">🛋️ Modern Suggestions</button>
+        <button class="chip" onclick="sendQuick('What colors suit a minimal bedroom?')">🎨 Color Tips</button>
+        <button class="chip" onclick="sendQuick('Book an ergonomic chair')">📦 Book Chair</button>
+        <button class="chip" onclick="sendQuick('Show my bookings')">📋 My Bookings</button>
+      </div>
+      <div class="input-row">
+        <button class="mic-btn" id="mic-btn" onclick="toggleVoice()" title="Voice input">🎙️</button>
+        <input type="text" id="chat-input" placeholder="Type or speak your message…"
+               onkeydown="if(event.key==='Enter') sendMessage()"/>
+        <button class="send-btn" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar suggestions -->
+  <div class="buddy-sidebar">
+    <h4>💡 Try Asking</h4>
+    <div class="suggestion-list">
+      <div class="sug-item" onclick="sendQuick('मला आधुनिक सोफा सुचवा')">मला आधुनिक सोफा सुचवा</div>
+      <div class="sug-item" onclick="sendQuick('मुझे क्लासिक डाइनिंग टेबल चाहिए')">मुझे क्लासिक टेबल चाहिए</div>
+      <div class="sug-item" onclick="sendQuick('LED lamp book karo')">LED lamp book karo</div>
+      <div class="sug-item" onclick="sendQuick('What is the best color for a small room?')">Best color for small room?</div>
+      <div class="sug-item" onclick="sendQuick('Suggest industrial style furniture')">Industrial style furniture</div>
+    </div>
+    <div class="voice-info">
+      <h4>🎙️ Voice Languages</h4>
+      <div class="lang-info">🇮🇳 मराठी (Marathi)</div>
+      <div class="lang-info">🇮🇳 हिंदी (Hindi)</div>
+      <div class="lang-info">🇬🇧 English</div>
+      <small>Powered by Sarvam AI</small>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+<script src="{{ url_for('static', filename='js/buddy.js') }}"></script>
+{% endblock %}

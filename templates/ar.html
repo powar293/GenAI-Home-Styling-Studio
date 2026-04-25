@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}AR Room – Gruha Alankara{% endblock %}
+{% block page_title %}AR Room Visualiser{% endblock %}
+{% block content %}
+<div class="ar-page">
+  <!-- AR Viewport -->
+  <div class="ar-viewport">
+    <video id="ar-video" autoplay playsinline></video>
+    <canvas id="ar-canvas"></canvas>
+    <div class="ar-overlay-ui">
+      <div class="ar-badge">🥽 AR Mode</div>
+      <button class="ar-snapshot-btn" onclick="arSnapshot()">📸</button>
+    </div>
+    <div class="ar-start-prompt" id="ar-start-prompt">
+      <div class="ar-prompt-content">
+        <div style="font-size:3rem">🥽</div>
+        <h3>AR Visualiser</h3>
+        <p>Place virtual furniture in your room using your camera</p>
+        <button class="btn-primary" onclick="startAR()">📷 Start Camera</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Furniture Palette -->
+  <div class="ar-palette">
+    <h4>🛋️ Furniture Library</h4>
+    <p class="palette-hint">Click an item to place it on camera</p>
+    <div class="ar-items">
+      {% for f in furniture_list[:12] %}
+      <div class="ar-item" onclick="placeItem('{{ f.name }}', '{{ f.category }}', {{ f.price }})"
+           title="{{ f.name }} – ₹{{ '{:,.0f}'.format(f.price) }}">
+        <div class="ar-item-icon">{{ {'Seating':'🛋️','Tables':'🪑','Lighting':'💡','Storage':'📚','Bedroom':'🛏️','Decor':'🌿'}[f.category] or '🪑' }}</div>
+        <div class="ar-item-name">{{ f.name[:14] }}</div>
+        <div class="ar-item-price">₹{{ '{:,.0f}'.format(f.price) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="ar-controls">
+      <button class="ar-ctrl-btn" onclick="arClearAll()" title="Clear All">🗑️ Clear</button>
+      <button class="ar-ctrl-btn" id="ar-book-btn" onclick="arBookSelected()" title="Book selected">📦 Book</button>
+    </div>
+    <div id="ar-selected-info" class="ar-selected-info" style="display:none"></div>
+  </div>
+</div>
+
+<div id="ar-snapshot-preview" class="snapshot-preview hidden">
+  <img id="snapshot-img" src="" alt="AR Snapshot"/>
+  <div class="snapshot-actions">
+    <a id="snapshot-dl" download="gruha-ar.jpg" class="btn-primary">⬇ Download</a>
+    <button onclick="document.getElementById('ar-snapshot-preview').classList.add('hidden')">✕</button>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/ar.js') }}"></script>
+{% endblock %}

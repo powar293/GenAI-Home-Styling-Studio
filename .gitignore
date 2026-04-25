@@ -1,0 +1,12 @@
+__pycache__/
+instance/
+uploads/*
+!uploads/.gitkeep
+scratch/
+*.pyc
+.env
+.venv/
+node_modules/
+.vscode/
+.idea/
+*.log

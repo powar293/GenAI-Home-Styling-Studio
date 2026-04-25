@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – Gruha Alankara{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+<div class="dashboard">
+  <!-- Welcome -->
+  <div class="welcome-banner">
+    <div class="welcome-text">
+      <h2>Namaste, {{ current_user.username }} 👋</h2>
+      <p>Ready to design something beautiful today?</p>
+    </div>
+    <a href="/design" class="btn-primary">+ New Design</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">🎨</div>
+      <div class="stat-info">
+        <div class="stat-value">{{ designs_count }}</div>
+        <div class="stat-label">Total Designs</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📦</div>
+      <div class="stat-info">
+        <div class="stat-value">{{ bookings_count }}</div>
+        <div class="stat-label">Bookings</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🥽</div>
+      <div class="stat-info">
+        <div class="stat-value">AR</div>
+        <div class="stat-label">Room Preview</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🤖</div>
+      <div class="stat-info">
+        <div class="stat-value">Buddy</div>
+        <div class="stat-label">AI Assistant</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="section-header"><h3>Quick Actions</h3></div>
+  <div class="quick-actions">
+    <a href="/design" class="action-card">
+      <div class="action-icon">📸</div>
+      <div class="action-label">Upload Room Photo</div>
+      <div class="action-sub">Get AI design suggestions</div>
+    </a>
+    <a href="/ar" class="action-card">
+      <div class="action-icon">🥽</div>
+      <div class="action-label">Open AR Room</div>
+      <div class="action-sub">Place furniture in your room</div>
+    </a>
+    <a href="/buddy" class="action-card">
+      <div class="action-icon">🎙️</div>
+      <div class="action-label">Talk to Buddy</div>
+      <div class="action-sub">Voice chat in मराठी / हिंदी / English</div>
+    </a>
+    <a href="/bookings" class="action-card">
+      <div class="action-icon">📦</div>
+      <div class="action-label">My Bookings</div>
+      <div class="action-sub">Track your furniture orders</div>
+    </a>
+  </div>
+
+  <!-- Recent Designs -->
+  {% if designs %}
+  <div class="section-header"><h3>Recent Designs</h3><a href="/design" class="see-all">See All →</a></div>
+  <div class="designs-grid">
+    {% for d in designs %}
+    <div class="design-card">
+      {% if d.image_path %}
+      <div class="design-thumb" style="background-image:url('/uploads/{{ d.image_path.split('/')[-1] }}')"></div>
+      {% else %}
+      <div class="design-thumb design-thumb-placeholder">🏠</div>
+      {% endif %}
+      <div class="design-info">
+        <div class="design-style">{{ d.style }}</div>
+        <div class="design-date">{{ d.created_at.strftime('%d %b %Y') }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🎨</div>
+    <h3>No designs yet</h3>
+    <p>Upload your first room photo to get started!</p>
+    <a href="/design" class="btn-primary">Create First Design</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>{% block title %}Gruha Alankara – AI Interior Design{% endblock %}</title>
+  <meta name="description" content="AI-powered interior design with AR visualization and multilingual voice assistant"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  {% if current_user.is_authenticated %}
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">🏠</span>
+      <span class="brand-text">Gruha<br><small>Alankara</small></span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}">
+        <span class="nav-icon">📊</span><span>Dashboard</span>
+      </a>
+      <a href="/design" class="nav-item {% if request.path == '/design' %}active{% endif %}">
+        <span class="nav-icon">🎨</span><span>Design Studio</span>
+      </a>
+      <a href="/ar" class="nav-item {% if request.path == '/ar' %}active{% endif %}">
+        <span class="nav-icon">🥽</span><span>AR Room</span>
+      </a>
+      <a href="/buddy" class="nav-item {% if request.path == '/buddy' %}active{% endif %}">
+        <span class="nav-icon">🤖</span><span>AI Buddy</span>
+      </a>
+      <a href="/bookings" class="nav-item {% if request.path == '/bookings' %}active{% endif %}">
+        <span class="nav-icon">📦</span><span>Bookings</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar">{{ current_user.username[0].upper() }}</div>
+        <div class="user-details">
+          <div class="user-name">{{ current_user.username }}</div>
+          <div class="user-email">{{ current_user.email }}</div>
+        </div>
+      </div>
+      <a href="/logout" class="logout-btn">⬡ Logout</a>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main-wrapper">
+    <header class="topbar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+      <div class="topbar-actions">
+        <a href="/buddy" class="topbar-btn" title="AI Buddy">🤖</a>
+        <a href="/ar" class="topbar-btn" title="AR Room">🥽</a>
+      </div>
+    </header>
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% else %}
+  <!-- Not logged in: full-page layout -->
+  {% block full_content %}{% endblock %}
+  {% endif %}
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

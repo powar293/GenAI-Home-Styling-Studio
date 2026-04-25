@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Bookings – Gruha Alankara{% endblock %}
+{% block page_title %}My Bookings{% endblock %}
+{% block content %}
+<div class="bookings-page">
+  <div class="bookings-header">
+    <h2>📦 My Furniture Bookings</h2>
+    <a href="/design" class="btn-primary">+ New Design</a>
+  </div>
+
+  {% if bookings %}
+  <div class="bookings-grid">
+    {% for b in bookings %}
+    <div class="booking-card" id="booking-{{ b.id }}">
+      {% if b.furniture.image_url %}
+      <div class="booking-img" style="background-image:url('{{ b.furniture.image_url }}')"></div>
+      {% else %}
+      <div class="booking-img booking-img-placeholder">🛋️</div>
+      {% endif %}
+      <div class="booking-info">
+        <div class="booking-name">{{ b.furniture.name }}</div>
+        <div class="booking-cat">{{ b.furniture.category }}</div>
+        <div class="booking-price">₹{{ '{:,.0f}'.format(b.furniture.price) }}</div>
+        {% if b.design %}
+        <div class="booking-style">Style: {{ b.design.style }}</div>
+        {% endif %}
+        <div class="booking-date">📅 {{ b.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+        <div class="booking-status status-{{ b.status }}">
+          {{ {'confirmed':'✅ Confirmed','cancelled':'❌ Cancelled','delivered':'🎉 Delivered','pending':'⏳ Pending'}[b.status] or b.status }}
+        </div>
+      </div>
+      <div class="booking-actions">
+        {% if b.status == 'confirmed' %}
+        <button class="btn-cancel" onclick="cancelBooking({{ b.id }})">Cancel</button>
+        {% endif %}
+        <a href="/design" class="btn-sm">Re-order</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="bookings-summary">
+    <div class="summary-item">Total Bookings: <strong>{{ bookings|length }}</strong></div>
+    <div class="summary-item">Confirmed: <strong>{{ bookings|selectattr('status','eq','confirmed')|list|length }}</strong></div>
+    <div class="summary-item">
+      Total Value: <strong>₹{{ '{:,.0f}'.format(bookings|selectattr('status','ne','cancelled')|sum(attribute='furniture.price')) }}</strong>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📦</div>
+    <h3>No bookings yet</h3>
+    <p>Design your room and book furniture through AI suggestions or the AI Buddy.</p>
+    <div class="empty-actions">
+      <a href="/design" class="btn-primary">🎨 Start Designing</a>
+      <a href="/buddy" class="btn-secondary">🤖 Ask AI Buddy</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+async function cancelBooking(id) {
+  if (!confirm('Cancel this booking?')) return;
+  const res = await fetch(`/api/cancel-booking/${id}`, {method:'POST'});
+  const d = await res.json();
+  if (d.success) {
+    const card = document.getElementById(`booking-${id}`);
+    card.querySelector('.booking-status').className = 'booking-status status-cancelled';
+    card.querySelector('.booking-status').textContent = '❌ Cancelled';
+    card.querySelector('.btn-cancel')?.remove();
+    showToast('Booking cancelled', 'info');
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Design Studio – Gruha Alankara{% endblock %}
+{% block page_title %}Design Studio{% endblock %}
+{% block content %}
+<div class="design-page">
+  <div class="design-left">
+    <!-- Upload Zone -->
+    <div class="panel">
+      <h3>📸 Upload Room Image</h3>
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('room-input').click()">
+        <div class="upload-icon">⬆️</div>
+        <p>Click or drag-and-drop your room photo</p>
+        <small>JPG, PNG, WEBP up to 16MB</small>
+        <input type="file" id="room-input" accept="image/*" hidden onchange="previewImage(this)"/>
+      </div>
+      <div id="image-preview" class="image-preview hidden">
+        <img id="preview-img" src="" alt="Room preview"/>
+        <button class="btn-sm" onclick="clearImage()">✕ Remove</button>
+      </div>
+    </div>
+
+    <!-- Camera Capture -->
+    <div class="panel">
+      <h3>📷 Or Use Camera</h3>
+      <div class="camera-area" id="camera-area" style="display:none;">
+        <video id="cam-video" autoplay playsinline></video>
+        <button class="btn-capture" onclick="captureSnapshot()">📸 Capture</button>
+      </div>
+      <button class="btn-secondary" id="cam-btn" onclick="toggleCamera()">🎥 Open Camera</button>
+    </div>
+
+    <!-- Style Selector -->
+    <div class="panel">
+      <h3>🎨 Design Style</h3>
+      <div class="style-grid">
+        {% for s in styles %}
+        <button class="style-btn" data-style="{{ s }}" onclick="selectStyle(this)">
+          <span class="style-emoji">{{ {'Modern':'🏙️','Classic':'🏛️','Minimal':'⬜','Bohemian':'🌿','Industrial':'🔧','Scandinavian':'❄️'}[s] }}</span>
+          <span>{{ s }}</span>
+        </button>
+        {% endfor %}
+      </div>
+      <input type="hidden" id="selected-style" value="Modern"/>
+    </div>
+
+    <button class="btn-analyze" id="analyze-btn" onclick="analyzeRoom()">
+      🧠 Analyze with AI
+    </button>
+  </div>
+
+  <!-- Results Panel -->
+  <div class="design-right" id="results-panel">
+    <div class="results-placeholder" id="results-placeholder">
+      <div class="placeholder-icon">🧠</div>
+      <h3>AI Suggestions Appear Here</h3>
+      <p>Upload a room photo, pick a style, and click Analyze</p>
+    </div>
+
+    <div id="ai-results" class="hidden">
+      <!-- Room Info -->
+      <div class="result-header">
+        <div>
+          <h3 id="res-room-type">Living Room</h3>
+          <p id="res-style-label" class="res-style-tag"></p>
+        </div>
+        <div class="res-budget" id="res-budget"></div>
+      </div>
+
+      <!-- Furniture Suggestions -->
+      <div class="result-section">
+        <h4>🛋️ Furniture Suggestions</h4>
+        <div class="furniture-list" id="furniture-list"></div>
+      </div>
+
+      <!-- Colour Palette -->
+      <div class="result-section">
+        <h4>🎨 Colour Palette</h4>
+        <div class="color-palette" id="color-palette"></div>
+      </div>
+
+      <!-- Design Tips -->
+      <div class="result-section">
+        <h4>💡 Design Tips</h4>
+        <ul class="tips-list" id="tips-list"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentStyle = 'Modern';
+let capturedImageBlob = null;
+let stream = null;
+let currentDesignId = null;
+
+function selectStyle(btn) {
+  document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentStyle = btn.dataset.style;
+}
+
+function previewImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('image-preview').classList.remove('hidden');
+    document.getElementById('upload-zone').classList.add('hidden');
+  };
+  reader.readAsDataURL(file);
+  const zone = document.getElementById('upload-zone');
+  zone.classList.add('has-file');
+}
+
+function clearImage() {
+  document.getElementById('room-input').value = '';
+  document.getElementById('image-preview').classList.add('hidden');
+  document.getElementById('upload-zone').classList.remove('hidden');
+}
+
+async function toggleCamera() {
+  const area = document.getElementById('camera-area');
+  const btn = document.getElementById('cam-btn');
+  if (area.style.display === 'none') {
+    stream = await navigator.mediaDevices.getUserMedia({video: true});
+    document.getElementById('cam-video').srcObject = stream;
+    area.style.display = 'block';
+    btn.textContent = '⛔ Close Camera';
+  } else {
+    stream?.getTracks().forEach(t => t.stop());
+    area.style.display = 'none';
+    btn.textContent = '🎥 Open Camera';
+  }
+}
+
+function captureSnapshot() {
+  const video = document.getElementById('cam-video');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  canvas.toBlob(blob => {
+    capturedImageBlob = blob;
+    document.getElementById('preview-img').src = canvas.toDataURL();
+    document.getElementById('image-preview').classList.remove('hidden');
+    showToast('📸 Snapshot captured!', 'success');
+  }, 'image/jpeg');
+}
+
+async function analyzeRoom() {
+  const btn = document.getElementById('analyze-btn');
+  btn.textContent = '⏳ Analyzing…'; btn.disabled = true;
+
+  const fd = new FormData();
+  fd.append('style', currentStyle);
+
+  const fileInput = document.getElementById('room-input');
+  if (fileInput.files[0]) fd.append('image', fileInput.files[0]);
+  else if (capturedImageBlob) fd.append('image', capturedImageBlob, 'capture.jpg');
+
+  try {
+    const res = await fetch('/api/analyze', {method: 'POST', body: fd});
+    const data = await res.json();
+    if (data.success) {
+      currentDesignId = data.design_id;
+      renderResults(data.suggestions);
+    } else { showToast('Analysis failed', 'error'); }
+  } catch(e) { showToast('Network error', 'error'); }
+
+  btn.textContent = '🧠 Analyze with AI'; btn.disabled = false;
+}
+
+function renderResults(s) {
+  document.getElementById('results-placeholder').classList.add('hidden');
+  document.getElementById('ai-results').classList.remove('hidden');
+  document.getElementById('res-room-type').textContent = s.room_type || 'Your Room';
+  document.getElementById('res-style-label').textContent = currentStyle + ' Style';
+  document.getElementById('res-budget').innerHTML = `<span>Est. Budget</span><strong>${s.estimated_budget}</strong>`;
+
+  // Furniture
+  const fl = document.getElementById('furniture-list');
+  fl.innerHTML = (s.furniture || []).map(f => `
+    <div class="furn-card">
+      <div class="furn-info">
+        <div class="furn-name">${f.name}</div>
+        <div class="furn-cat">${f.category}</div>
+        <div class="furn-desc">${f.desc}</div>
+      </div>
+      <div class="furn-right">
+        <div class="furn-price">₹${Number(f.price).toLocaleString('en-IN')}</div>
+        <button class="btn-book" onclick="bookItem('${f.name}', ${f.price})">Book</button>
+      </div>
+    </div>`).join('');
+
+  // Colors
+  const cp = document.getElementById('color-palette');
+  cp.innerHTML = (s.colors || []).map(c => `
+    <div class="color-swatch">
+      <div class="swatch-box" style="background:${c.hex}"></div>
+      <div class="swatch-name">${c.name}</div>
+      <div class="swatch-role">${c.role}</div>
+      <div class="swatch-hex">${c.hex}</div>
+    </div>`).join('');
+
+  // Tips
+  const tl = document.getElementById('tips-list');
+  tl.innerHTML = (s.tips || []).map(t => `<li>💡 ${t}</li>`).join('');
+}
+
+async function bookItem(name, price) {
+  // Find furniture by name from API
+  const res = await fetch('/api/furniture');
+  const items = await res.json();
+  const item = items.find(i => i.name.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
+  if (!item) { showToast('Item not in catalog — ask AI Buddy!', 'info'); return; }
+  const r = await fetch('/api/book', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({furniture_id: item.id, design_id: currentDesignId})
+  });
+  const d = await r.json();
+  showToast(d.message || '✅ Booked!', d.success ? 'success' : 'error');
+}
+
+// Drag-and-drop
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) { document.getElementById('room-input').files = e.dataTransfer.files; previewImage(document.getElementById('room-input')); }
+});
+
+// Select first style by default
+document.querySelector('.style-btn')?.classList.add('active');
+</script>
+{% endblock %}
