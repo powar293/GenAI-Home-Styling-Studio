@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Premium Furniture Advisor · फर्निचर सल्लागार</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+<style>
+  :root {
+    --bg-dark: #121212;
+    --bg-surface: #1E1E1E;
+    --bg-surface-light: #2A2A2A;
+    --gold-primary: #D4AF37;
+    --gold-hover: #E5C158;
+    --text-main: #FDF5E6;
+    --text-muted: #A0A0A0;
+    --border-color: rgba(212, 175, 55, 0.2);
+  }
+
+  body {
+    margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--bg-dark); color: var(--text-main);
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+  }
+
+  /* Header */
+  header {
+    background-color: var(--bg-surface); padding: 15px 25px;
+    border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 10;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.2em; color: var(--gold-primary); letter-spacing: 0.5px; }
+  .header-right { display: flex; align-items: center; gap: 15px; }
+  
+  .pills { display: flex; gap: 5px; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 12px; border: 1px solid var(--border-color); }
+  .pill { color: var(--text-muted); padding: 6px 12px; border-radius: 8px; font-size: 0.8em; font-weight: 600; cursor: pointer; transition: 0.3s; }
+  .pill.active { background: var(--gold-primary); color: var(--bg-dark); }
+
+  .settings-btn {
+    background: transparent; border: 1px solid var(--gold-primary); color: var(--gold-primary);
+    padding: 6px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: 0.3s;
+  }
+  .settings-btn:hover { background: var(--gold-primary); color: var(--bg-dark); }
+
+  /* Product Carousel */
+  .catalog-wrapper {
+    padding: 20px 25px; background: var(--bg-surface-light); border-bottom: 1px solid var(--border-color);
+  }
+  .catalog-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gold-primary); margin-bottom: 12px; font-weight: 700; }
+  .product-scroll {
+    display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: var(--gold-primary) var(--bg-dark);
+  }
+  .product-scroll::-webkit-scrollbar { height: 6px; }
+  .product-scroll::-webkit-scrollbar-thumb { background: var(--gold-primary); border-radius: 10px; }
+  .product-card {
+    min-width: 220px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px;
+    padding: 15px; cursor: pointer; transition: 0.3s; display: flex; flex-direction: column; gap: 8px;
+  }
+  .product-card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(212, 175, 55, 0.15); border-color: var(--gold-primary); }
+  .pc-name { font-weight: 700; font-size: 0.95rem; color: var(--text-main); }
+  .pc-price { color: var(--gold-primary); font-weight: 800; font-size: 1.1rem; }
+  .pc-meta { font-size: 0.75rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 4px; }
+  .pc-tag { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; }
+
+  /* Chat Area */
+  #chat-container { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
+
+  .msg-row { display: flex; flex-direction: column; max-width: 80%; }
+  .msg-row.user { align-self: flex-end; }
+  .msg-row.bot { align-self: flex-start; }
+  
+  .msg-bubble { padding: 14px 18px; border-radius: 18px; line-height: 1.5; font-size: 0.95rem; }
+  .msg-row.user .msg-bubble { background: var(--gold-primary); color: var(--bg-dark); border-bottom-right-radius: 4px; font-weight: 500; }
+  .msg-row.bot .msg-bubble { background: var(--bg-surface-light); color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
+
+  .listen-btn {
+    align-self: flex-start; margin-top: 8px; background: var(--bg-surface); border: 1px solid var(--border-color);
+    border-radius: 12px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; color: var(--gold-primary);
+    display: flex; align-items: center; gap: 6px; transition: 0.3s; font-weight: 600;
+  }
+  .listen-btn:hover { background: rgba(212, 175, 55, 0.1); }
+
+  .quick-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+  .quick-chip {
+    background: transparent; border: 1px solid var(--border-color); color: var(--text-muted);
+    padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: 0.3s;
+  }
+  .quick-chip:hover { border-color: var(--gold-primary); color: var(--gold-primary); }
+
+  /* Input Area */
+  .input-area { background: var(--bg-surface); border-top: 1px solid var(--border-color); padding: 15px 25px; display: flex; gap: 12px; align-items: center; }
+  .input-area input {
+    flex: 1; padding: 14px 20px; border: 1px solid var(--border-color); border-radius: 24px;
+    background: var(--bg-dark); color: var(--text-main); outline: none; font-size: 1rem; transition: 0.3s;
+  }
+  .input-area input:focus { border-color: var(--gold-primary); box-shadow: 0 0 10px rgba(212, 175, 55, 0.1); }
+  
+  .action-btn {
+    background: transparent; color: var(--gold-primary); border: 1px solid var(--gold-primary); padding: 0 20px; height: 50px;
+    border-radius: 25px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 1rem; font-weight: 600;
+    transition: 0.3s;
+  }
+  .action-btn:hover { background: rgba(212, 175, 55, 0.1); }
+  .action-btn.recording { background: #ef4444; color: white; border-color: #ef4444; animation: pulse 1.5s infinite; }
+  
+  .icon-btn {
+    background: var(--gold-primary); color: var(--bg-dark); border: none; width: 50px; height: 50px;
+    border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+    transition: 0.3s;
+  }
+  .icon-btn:hover { background: var(--gold-hover); transform: translateY(-2px); }
+
+  #status-bar {
+    background: #000; color: var(--gold-primary); font-size: 0.75rem; padding: 6px 20px; text-align: center; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; border-top: 1px solid var(--border-color);
+  }
+
+  /* Modals */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .modal {
+    background: var(--bg-surface); border: 1px solid var(--gold-primary); border-radius: 16px; padding: 30px;
+    width: 90%; max-width: 450px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
+  .modal h2 { margin: 0 0 20px 0; color: var(--gold-primary); font-size: 1.5rem; display: flex; align-items: center; gap: 10px; }
+  .form-group { margin-bottom: 20px; }
+  .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
+  .form-group input {
+    width: 100%; box-sizing: border-box; padding: 12px 15px; border: 1px solid var(--border-color); border-radius: 8px;
+    background: var(--bg-dark); color: var(--text-main); font-family: monospace; outline: none;
+  }
+  .form-group input:focus { border-color: var(--gold-primary); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 30px; }
+  .btn-save { background: var(--gold-primary); color: var(--bg-dark); border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  .btn-close { background: transparent; color: var(--text-muted); border: 1px solid var(--text-muted); padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+
+  /* Typing */
+  .typing { display: flex; gap: 5px; padding: 14px 18px; background: var(--bg-surface-light); border: 1px solid var(--border-color); border-radius: 18px; border-bottom-left-radius: 4px; width: fit-content; }
+  .dot { width: 8px; height: 8px; background: var(--gold-primary); border-radius: 50%; animation: blink 1.4s infinite both; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <i class="ti ti-diamond"></i> Premium Furniture Advisor
+  </div>
+  <div class="header-right">
+    <div class="pills">
+      <span class="pill" id="lang-mr" onclick="setLang('mr')">मराठी</span>
+      <span class="pill active" id="lang-en" onclick="setLang('en')">English</span>
+    </div>
+    <button class="settings-btn" onclick="openModal()"><i class="ti ti-settings"></i> API Keys</button>
+  </div>
+</header>
+
+<div class="catalog-wrapper">
+  <div class="catalog-title">Showroom Collection</div>
+  <div class="product-scroll" id="product-scroll">
+    <!-- Rendered via JS -->
+  </div>
+</div>
+
+<div id="chat-container">
+  <div class="msg-row bot">
+    <div class="msg-bubble">Welcome to the Premium Showroom. I am your expert Furniture Advisor.<br><br>नमस्कार! मी तुमचा फर्निचर सल्लागार आहे. मी तुम्हाला कशी मदत करू शकतो?</div>
+    <button class="listen-btn" onclick="playTTS(this, 'Welcome to the Premium Showroom. I am your expert Furniture Advisor. नमस्कार! मी तुमचा फर्निचर सल्लागार आहे. मी तुम्हाला कशी मदत करू शकतो?')">
+      <i class="ti ti-volume"></i> ऐका
+    </button>
+    <div class="quick-chips" id="initial-chips">
+      <button class="quick-chip" onclick="sendMsg('Show me the Royal Velvet Sofa')">Royal Velvet Sofa</button>
+      <button class="quick-chip" onclick="sendMsg('What dining tables do you have?')">Dining Sets</button>
+      <button class="quick-chip" onclick="sendMsg('मला लाकडी बेड दाखवा')">लाकडी बेड (Wooden Beds)</button>
+      <button class="quick-chip" onclick="sendMsg('Do you have budget options under ₹20,000?')">Budget Options</button>
+    </div>
+  </div>
+</div>
+
+<div id="typing-indicator" class="msg-row bot hidden" style="padding: 0 25px 25px 25px;">
+  <div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+</div>
+
+<div class="input-area">
+  <button id="mic-btn" class="action-btn" onclick="toggleRecord()">
+    <i class="ti ti-microphone"></i> <span>बोला</span>
+  </button>
+  <input type="text" id="text-input" placeholder="Ask about our collection..." onkeydown="if(event.key==='Enter') sendMsg()">
+  <button class="icon-btn" onclick="sendMsg()"><i class="ti ti-send"></i></button>
+</div>
+
+<div id="status-bar">Ready</div>
+
+<!-- Settings Modal -->
+<div id="api-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <h2><i class="ti ti-key"></i> API Configuration</h2>
+    <div class="form-group">
+      <label>Google Gemini API Key</label>
+      <input type="password" id="gemini-key-input" placeholder="AIzaSy...">
+    </div>
+    <div class="form-group">
+      <label>Sarvam AI API Key</label>
+      <input type="password" id="sarvam-key-input" placeholder="sk_...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-close" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveKeys()">Save Keys</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Catalog Data
+const catalog = [
+  { name: "Royal Velvet Sofa", category: "Living Room", price: 45000, material: "Premium Velvet, Teak Wood Frame", size: "3-seater (84x36x34 inches)", colors: ["Emerald Green", "Navy Blue"], warranty: "5 Years" },
+  { name: "Minimalist Teak Bed", category: "Bedroom", price: 55000, material: "Solid Teak Wood", size: "Queen Size (60x80 inches)", colors: ["Natural Wood", "Walnut"], warranty: "10 Years" },
+  { name: "Marble Top Dining Set", category: "Dining", price: 85000, material: "White Marble & Brass", size: "6-seater (72x36 inches)", colors: ["White/Gold"], warranty: "5 Years" },
+  { name: "Ergonomic Office Chair", category: "Office", price: 12500, material: "Breathable Mesh, Steel Base", size: "Adjustable Height", colors: ["Black", "Grey"], warranty: "3 Years" },
+  { name: "Classic Leather Recliner", category: "Living Room", price: 35000, material: "Genuine Leather", size: "Single Seater", colors: ["Tan", "Black"], warranty: "2 Years" },
+  { name: "Modern Glass Coffee Table", category: "Living Room", price: 18000, material: "Tempered Glass & Brushed Steel", size: "Circular (36 inch dia)", colors: ["Clear/Silver"], warranty: "1 Year" },
+  { name: "Wooden Bookshelf", category: "Storage", price: 22000, material: "Mango Wood", size: "5-Tier (72x30x12 inches)", colors: ["Walnut Finish"], warranty: "5 Years" },
+  { name: "Boho Rattan Swing Chair", category: "Decor/Outdoor", price: 15000, material: "Natural Rattan", size: "Single Seater", colors: ["Beige", "White Cushion"], warranty: "1 Year" },
+  { name: "Standing Desk", category: "Office", price: 28000, material: "Engineered Wood & Metal Frame", size: "Motorized Height (48x24 inches)", colors: ["Oak", "Black"], warranty: "3 Years" },
+  { name: "Luxury Silk Rug", category: "Decor", price: 25000, material: "Hand-knotted Silk", size: "5x8 ft", colors: ["Persian Blue", "Gold"], warranty: "2 Years" },
+  { name: "LED Arc Floor Lamp", category: "Lighting", price: 8500, material: "Brushed Brass", size: "Adjustable Arc (60 inches tall)", colors: ["Warm White LED"], warranty: "1 Year" }
+];
+
+// Render Catalog
+const productScroll = document.getElementById('product-scroll');
+catalog.forEach(item => {
+  const card = document.createElement('div');
+  card.className = 'product-card';
+  card.onclick = () => sendMsg(`Tell me more about the ${item.name}`);
+  card.innerHTML = `
+    <div class="pc-name">${item.name}</div>
+    <div class="pc-price">₹${item.price.toLocaleString('en-IN')}</div>
+    <div class="pc-meta">
+      <span class="pc-tag">${item.category}</span>
+      <span class="pc-tag">${item.warranty}</span>
+    </div>
+  `;
+  productScroll.appendChild(card);
+});
+
+// App State
+let preferredLang = 'en'; // purely for UI hints if needed
+let chatHistory = [];
+let messagesData = [];
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
+
+// Settings Logic
+function openModal() {
+  document.getElementById('gemini-key-input').value = localStorage.getItem('gemini_key') || '';
+  document.getElementById('sarvam-key-input').value = localStorage.getItem('sarvam_key') || '';
+  document.getElementById('api-modal').classList.remove('hidden');
+}
+function closeModal() { document.getElementById('api-modal').classList.add('hidden'); }
+function saveKeys() {
+  localStorage.setItem('gemini_key', document.getElementById('gemini-key-input').value.trim());
+  localStorage.setItem('sarvam_key', document.getElementById('sarvam-key-input').value.trim());
+  closeModal();
+  setStatus('Keys saved successfully');
+}
+function getKeys() {
+  return {
+    gemini: localStorage.getItem('gemini_key'),
+    sarvam: localStorage.getItem('sarvam_key')
+  };
+}
+
+// UI Helpers
+function setLang(lang) {
+  preferredLang = lang;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  document.getElementById('lang-' + lang).classList.add('active');
+}
+function setStatus(msg) { document.getElementById('status-bar').innerText = msg; }
+function scrollToBottom() {
+  const container = document.getElementById('chat-container');
+  container.scrollTop = container.scrollHeight;
+}
+function stripMarkdown(text) { return text.replace(/[*#_\`]/g, ''); }
+function detectLang(text) {
+  const devanagariRegex = /[\u0900-\u097F]/g;
+  const matches = text.match(devanagariRegex);
+  return (matches && matches.length > 4) ? 'mr-IN' : 'en-IN';
+}
+
+// Ensure keys on start
+window.onload = () => {
+  if (!getKeys().gemini || !getKeys().sarvam) {
+    openModal();
+    setStatus('Please configure API keys to start');
+  }
+};
+
+// TTS
+async function playTTS(btnElement, text) {
+  const keys = getKeys();
+  if (!keys.sarvam) { alert('Please set Sarvam API Key in Settings ⚙'); return; }
+
+  const originalHtml = btnElement.innerHTML;
+  btnElement.innerHTML = '<i class="ti ti-loader"></i> ...';
+  setStatus('Generating audio...');
+  
+  const cleanText = stripMarkdown(text).substring(0, 400);
+  const lang = detectLang(cleanText);
+  
+  try {
+    const res = await fetch('https://api.sarvam.ai/text-to-speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-subscription-key': keys.sarvam
+      },
+      body: JSON.stringify({
+        inputs: [cleanText],
+        target_language_code: lang,
+        speaker: "anushka", // Fallback for deprecated 'meera'
+        pitch: 0, pace: 1.0, loudness: 1.0, speech_sample_rate: 22050,
+        enable_preprocessing: true, model: "bulbul:v1"
+      })
+    });
+    const data = await res.json();
+    if (data.audios && data.audios[0]) {
+      const audio = new Audio("data:audio/wav;base64," + data.audios[0]);
+      audio.play();
+      setStatus('Playing audio...');
+      audio.onended = () => setStatus('Ready');
+    } else {
+      setStatus('TTS Error');
+      console.error(data);
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus('TTS Failed');
+  }
+  btnElement.innerHTML = originalHtml;
+}
+
+// Chat Flow
+function appendUserMsg(text) {
+  const container = document.getElementById('chat-container');
+  const typingIndicator = document.getElementById('typing-indicator');
+  const div = document.createElement('div');
+  div.className = 'msg-row user';
+  div.innerHTML = \`<div class="msg-bubble">\${text}</div>\`;
+  container.insertBefore(div, typingIndicator);
+  scrollToBottom();
+}
+
+function appendBotMsg(text) {
+  const container = document.getElementById('chat-container');
+  const typingIndicator = document.getElementById('typing-indicator');
+  
+  const msgId = messagesData.length;
+  messagesData.push(text);
+
+  const div = document.createElement('div');
+  div.className = 'msg-row bot';
+  const formattedText = text.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>').replace(/\\n/g, '<br>');
+  
+  div.innerHTML = \`
+    <div class="msg-bubble">\${formattedText}</div>
+    <button class="listen-btn" onclick="playTTS(this, messagesData[\${msgId}])">
+      <i class="ti ti-volume"></i> ऐका
+    </button>
+  \`;
+  container.insertBefore(div, typingIndicator);
+  scrollToBottom();
+}
+
+async function sendMsg(text = null) {
+  const keys = getKeys();
+  if (!keys.gemini) { alert('Please set Gemini API Key in Settings ⚙'); return; }
+
+  const input = document.getElementById('text-input');
+  const msg = text || input.value.trim();
+  if (!msg) return;
+  
+  input.value = '';
+  const chips = document.getElementById('initial-chips');
+  if (chips) chips.remove();
+  
+  appendUserMsg(msg);
+  chatHistory.push({ role: "user", parts: [{ text: msg }] });
+  if (chatHistory.length > 20) chatHistory = chatHistory.slice(chatHistory.length - 20);
+
+  document.getElementById('typing-indicator').classList.remove('hidden');
+  scrollToBottom();
+  setStatus('Thinking...');
+
+  const systemInstruction = \`You are a friendly bilingual Premium Furniture Advisor who understands both Marathi and English.
+You work in a luxury showroom. Suggest appropriate furniture based on the user's room, budget, and style preferences.
+Rules:
+- If user writes in Marathi, respond primarily in Marathi with English product names where needed.
+- If user writes in English, respond in English.
+- Keep responses concise and practical. Format clearly with item names and short descriptions.
+- ONLY suggest items from the following Premium Catalog:
+\${JSON.stringify(catalog, null, 2)}\`;
+
+  try {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + keys.gemini, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents: chatHistory,
+        generationConfig: { maxOutputTokens: 800, temperature: 0.75 }
+      })
+    });
+    
+    if (res.status === 429) { throw new Error('Quota Exceeded'); }
+    
+    const data = await res.json();
+    let reply = "Sorry, I couldn't process that. Please try again.";
+    if (data.candidates && data.candidates[0].content.parts[0].text) {
+      reply = data.candidates[0].content.parts[0].text;
+    }
+    
+    document.getElementById('typing-indicator').classList.add('hidden');
+    appendBotMsg(reply);
+    
+    chatHistory.push({ role: "model", parts: [{ text: reply }] });
+    if (chatHistory.length > 20) chatHistory = chatHistory.slice(chatHistory.length - 20);
+    setStatus('Ready');
+    
+  } catch (err) {
+    console.error(err);
+    document.getElementById('typing-indicator').classList.add('hidden');
+    if (err.message === 'Quota Exceeded') {
+      appendBotMsg("I am receiving too many requests right now. Please wait a moment and try again.");
+    } else {
+      appendBotMsg("Error connecting to AI. Please check your API key.");
+    }
+    setStatus('Error');
+  }
+}
+
+// STT
+async function toggleRecord() {
+  const keys = getKeys();
+  if (!keys.sarvam) { alert('Please set Sarvam API Key in Settings ⚙'); return; }
+
+  const micBtn = document.getElementById('mic-btn');
+  const btnText = micBtn.querySelector('span');
+  const btnIcon = micBtn.querySelector('i');
+
+  if (isRecording) {
+    mediaRecorder.stop();
+    btnIcon.className = 'ti ti-microphone';
+    btnText.innerText = 'बोला';
+    micBtn.classList.remove('recording');
+    isRecording = false;
+    setStatus('Transcribing...');
+    return;
+  }
+  
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
+    audioChunks = [];
+    
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(track => track.stop());
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      const formData = new FormData();
+      formData.append('file', blob, 'audio.webm');
+      formData.append('model', 'saarika:v2.5');
+      formData.append('language_code', 'unknown');
+
+      try {
+        const res = await fetch('https://api.sarvam.ai/speech-to-text', {
+          method: 'POST',
+          headers: { 'api-subscription-key': keys.sarvam },
+          body: formData
+        });
+        const data = await res.json();
+        if (data.transcript) {
+          document.getElementById('text-input').value = data.transcript;
+          setStatus('Ready');
+          setTimeout(() => sendMsg(), 400);
+        } else {
+          setStatus('Speech recognition failed');
+          console.error(data);
+        }
+      } catch (e) {
+        console.error(e);
+        setStatus('STT API Error');
+      }
+    };
+    
+    mediaRecorder.start();
+    isRecording = true;
+    btnIcon.className = 'ti ti-square';
+    btnText.innerText = 'थांबा';
+    micBtn.classList.add('recording');
+    setStatus('Recording...');
+  } catch (e) {
+    console.error(e);
+    alert('Microphone access denied or not supported in this browser.');
+    setStatus('Mic Access Error');
+  }
+}
+</script>
+</body>
+</html>

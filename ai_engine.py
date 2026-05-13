@@ -1,9 +1,23 @@
 import google.generativeai as genai
-import json, os
+import json, os, urllib.parse
 from PIL import Image
 from config import Config
 
 genai.configure(api_key=Config.GEMINI_API_KEY)
+
+# ── Budget ranges (label → min, max in INR) ──────────────────────────────────
+BUDGET_RANGES = {
+    "25k-50k":  (25000,  50000),
+    "50k-1l":   (50000,  100000),
+    "1l-2l":    (100000, 200000),
+    "2l-5l":    (200000, 500000),
+    "5l+":      (500000, 1500000),
+}
+
+ROOM_TYPES = [
+    "Living Room", "Bedroom", "Kitchen",
+    "Bathroom", "Office", "Dining Room",
+]
 
 # ── Mock fallback data ────────────────────────────────────────────────────────
 MOCK = {
@@ -163,47 +177,185 @@ def _parse_json(text: str) -> dict:
     return json.loads(text.strip())
 
 
-def analyze_room(image_path: str | None, style: str) -> dict:
-    """Call Gemini Vision to analyse the room; fall back to mock on error."""
-    style_key = style.lower()
+# ── Room Validation ──────────────────────────────────────────────────────────
+
+def validate_room_image(image_path: str) -> dict:
+    """Use Gemini Vision to verify the uploaded image is an interior room.
+    Returns {"is_room": bool, "message": str}.
+    """
     prompt = (
-        f"You are an expert interior designer. Analyse this room image and give recommendations "
-        f"for a **{style}** style interior. "
+        "Look at this image carefully. Is this an image of an interior room or indoor space "
+        "(like a living room, bedroom, kitchen, bathroom, office, dining room, etc.)?\n\n"
         "Return ONLY valid JSON (no extra text) with this exact structure:\n"
-        '{"furniture":[{"name":"...","category":"...","price":0,"style":"...","desc":"..."}],'
-        '"colors":[{"name":"...","hex":"#xxxxxx","role":"Primary|Secondary|Accent|Background"}],'
-        '"tips":["..."],"room_type":"...","estimated_budget":"₹X,XX,XXX"}\n'
-        "Include 5 furniture items (prices in INR), 4 colours, 4 tips."
+        '{"is_room": true, "room_type": "Living Room", "message": "Valid room detected."}\n'
+        "OR if it is NOT a room:\n"
+        '{"is_room": false, "room_type": null, "message": "This does not appear to be an interior room. '
+        'Please upload a clear photo of a room interior."}\n'
     )
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        img = Image.open(image_path)
+        response = model.generate_content([prompt, img])
+        return _parse_json(response.text)
+    except Exception as exc:
+        print(f"[ai_engine] validate_room_image error: {exc}")
+        # On failure, allow through (don't block the user)
+        return {"is_room": True, "room_type": "Room", "message": "Validation skipped."}
+
+
+# ── Room Analysis (budget-aware) ─────────────────────────────────────────────
+
+def analyze_room(image_path: str | None, style: str,
+                 room_type: str = "Living Room",
+                 budget_key: str = "1l-2l") -> dict:
+    """Call Gemini Vision to analyse the room with budget constraints.
+    The AI must keep total furniture cost within the user's budget range.
+    Falls back to mock data (filtered by budget) on error.
+    """
+    style_key = style.lower()
+    budget_min, budget_max = BUDGET_RANGES.get(budget_key, (100000, 200000))
+
+    prompt = (
+        f"You are an expert Indian interior designer. Analyse this room image and give recommendations "
+        f"for a **{style}** style **{room_type}**.\n\n"
+        f"**IMPORTANT BUDGET CONSTRAINT**: The customer's total budget is ₹{budget_min:,} to ₹{budget_max:,}.\n"
+        f"- The TOTAL COST of ALL furniture items MUST be within this budget range.\n"
+        f"- If budget is low (under ₹50,000), suggest only 2-3 essential items.\n"
+        f"- If budget is moderate (₹50,000–₹2,00,000), suggest 4-5 items.\n"
+        f"- If budget is high (above ₹2,00,000), suggest 5-7 premium items.\n"
+        f"- Each item's individual price must be realistic in INR for the Indian market.\n"
+        f"- Look closely at the structural layout of the uploaded room (e.g. 'large window on the left, wood floor, sloped ceiling'). Describe this structural layout in 15-20 words in the 'room_layout' field.\n\n"
+        "Return ONLY valid JSON (no extra text) with this exact structure:\n"
+        '{"furniture":[{"name":"...","category":"Seating|Tables|Lighting|Storage|Decor|Bedroom","price":0,"style":"...","desc":"..."}],'
+        '"colors":[{"name":"...","hex":"#xxxxxx","role":"Primary|Secondary|Accent|Background"}],'
+        '"tips":["..."],"room_type":"...","estimated_budget":"₹X,XX,XXX","room_layout":"..."}\n\n'
+        f"Prices in INR. Total of all furniture prices MUST be between ₹{budget_min:,} and ₹{budget_max:,}.\n"
+        f"Include 4 colours and 4 design tips."
+    )
+    try:
+        model = genai.GenerativeModel("gemini-2.5-flash")
         if image_path and os.path.exists(image_path):
             img = Image.open(image_path)
             response = model.generate_content([prompt, img])
         else:
             response = model.generate_content(
-                prompt + f"\n(No image provided – generate for a typical {style} room.)"
+                prompt + f"\n(No image provided – generate for a typical {style} {room_type}.)"
             )
-        return _parse_json(response.text)
+        suggestions = _parse_json(response.text)
+
+        # Attach generated room visualization URL
+        room_layout = suggestions.get('room_layout', '')
+        suggestions['visual_suggestion_url'] = _build_visual_url(
+            style, room_type, suggestions.get('furniture', []), room_layout
+        )
+        return suggestions
+
     except Exception as exc:
         print(f"[ai_engine] analyze_room error: {exc}")
-        return MOCK.get(style_key, MOCK["modern"])
+        data = MOCK.get(style_key, MOCK["modern"]).copy()
+        data["room_type"] = room_type
 
+        # Filter mock furniture to fit within budget
+        data["furniture"] = _filter_furniture_by_budget(
+            data["furniture"], budget_min, budget_max
+        )
+        total = sum(f["price"] for f in data["furniture"])
+        data["estimated_budget"] = f"₹{total:,}"
+
+        data['visual_suggestion_url'] = _build_visual_url(
+            style, room_type, data["furniture"], ""
+        )
+        return data
+
+
+def _filter_furniture_by_budget(furniture_list: list, budget_min: int, budget_max: int) -> list:
+    """Filter/trim mock furniture list so total cost fits within budget."""
+    # Sort by price ascending, accumulate until we hit budget max
+    sorted_items = sorted(furniture_list, key=lambda f: f["price"])
+    selected = []
+    running_total = 0
+    for item in sorted_items:
+        if running_total + item["price"] <= budget_max:
+            selected.append(item)
+            running_total += item["price"]
+    # Ensure at least 1 item
+    if not selected and sorted_items:
+        selected = [sorted_items[0]]
+    return selected
+
+
+def _build_visual_url(style: str, room_type: str, furniture_list: list, room_layout: str = "") -> str:
+    """Build a Pollinations AI image URL for the furnished room visualization."""
+    style_keywords = {
+        'modern': 'sleek, glass, contemporary, minimalist',
+        'classic': 'elegant, traditional, ornate wood',
+        'minimal': 'clean, simple, spacious, white',
+        'bohemian': 'colorful, plants, eclectic, textiles',
+        'industrial': 'raw, metal, exposed brick, concrete',
+        'scandinavian': 'light wood, cozy, hygge, neutral tones'
+    }
+    keywords = style_keywords.get(style.lower(), 'modern')
+    furniture_names = ", ".join(f["name"] for f in furniture_list[:4])
+    
+    layout_str = f" The room structure must match this layout exactly: {room_layout}." if room_layout else ""
+
+    img_prompt = (
+        f"Professional interior design photo of a beautiful {style.capitalize()} style {room_type}.{layout_str} "
+        f"It is furnished with {furniture_names}, {keywords}, "
+        f"warm lighting, photorealistic, 8k, highly detailed, interior magazine quality"
+    )
+    encoded = urllib.parse.quote(img_prompt)
+    return f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=720&nologo=true"
+
+
+# ── Buddy Chat ───────────────────────────────────────────────────────────────
 
 def buddy_chat(message: str, lang: str, user_id: int, design_id=None) -> dict:
     """Run AI Buddy conversation via Gemini; return structured response."""
     lang_name = {"en": "English", "hi": "Hindi", "mr": "Marathi"}.get(lang, "English")
+
+    context_str = "You are Buddy, the expert AI interior design assistant for Gruha Alankara."
+    if design_id:
+        try:
+            from models import Design
+            design = Design.query.get(design_id)
+            if design:
+                context_str += f"\nContext: User is currently working on a {design.style} style design."
+        except Exception:
+            pass
+
     prompt = (
-        f"You are Buddy, the AI interior design assistant for Gruha Alankara.\n"
-        f"Always reply in {lang_name}.\n"
+        f"{context_str}\n"
+        f"You are Buddy Voice, an expert AI interior designer.\n"
+        f"You help users design rooms based on room dimensions, budget, style preference, and furniture needs.\n"
+        f"Always:\n"
+        f"- Ask follow-up questions if information is missing.\n"
+        f"- Suggest furniture with realistic estimated costs in INR.\n"
+        f"- Recommend matching colors and lighting.\n"
+        f"- Keep responses friendly and conversational.\n"
+        f"Always reply fluently and naturally in {lang_name}.\n"
         f"User said: \"{message}\"\n\n"
-        "Detect intent and reply with ONLY this JSON:\n"
-        '{"response":"<reply in language>","intent":"suggest|book|view_bookings|chat",'
-        '"furniture_name":"<name if booking else null>","suggestions":["item1","item2"]}\n'
-        "If booking intent, extract the furniture item name the user wants to book."
+        "Analyze the user's request and reply with ONLY this valid JSON (no markdown formatting or extra text):\n"
+        "{\n"
+        '  "response": "<your conversational spoken reply in the requested language>",\n'
+        '  "intent": "suggest|book|chat",\n'
+        '  "furniture_name": "<name if booking intent else null>",\n'
+        '  "furniture_suggestions": [\n'
+        '    {"name": "L-shaped sofa", "price": 35000, "material": "Fabric", "image_url": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=400&q=80"}\n'
+        '  ],\n'
+        '  "estimated_budget": {\n'
+        '    "items": [\n'
+        '       {"item": "L-shaped sofa", "cost": 35000}\n'
+        '    ],\n'
+        '    "total": 35000\n'
+        '  },\n'
+        '  "colors": ["#1a1a3e", "#f0f4f8"]\n'
+        "}\n"
+        "If booking intent, accurately extract the furniture item name the user wants to book.\n"
+        "For furniture image_url, provide a relevant placeholder Unsplash image URL (e.g. for a sofa, bed, etc.)."
     )
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(prompt)
         return _parse_json(response.text)
     except Exception as exc:
@@ -212,5 +364,7 @@ def buddy_chat(message: str, lang: str, user_id: int, design_id=None) -> dict:
             "response": BUDDY_FALLBACK.get(lang, BUDDY_FALLBACK["en"]),
             "intent": "chat",
             "furniture_name": None,
-            "suggestions": [],
+            "furniture_suggestions": [],
+            "estimated_budget": {"items": [], "total": 0},
+            "colors": []
         }

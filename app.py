@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 
 from config import Config
 from models import db, User, Design, Furniture, Booking
-from ai_engine import analyze_room, buddy_chat
+from ai_engine import analyze_room, buddy_chat, validate_room_image, ROOM_TYPES, BUDGET_RANGES
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -52,7 +52,15 @@ def dashboard():
 @login_required
 def design_page():
     styles = ['Modern', 'Classic', 'Minimal', 'Bohemian', 'Industrial', 'Scandinavian']
-    return render_template('design.html', styles=styles)
+    budget_options = [
+        {'key': '25k-50k', 'label': '₹25K – ₹50K'},
+        {'key': '50k-1l',  'label': '₹50K – ₹1 Lakh'},
+        {'key': '1l-2l',   'label': '₹1L – ₹2 Lakh'},
+        {'key': '2l-5l',   'label': '₹2L – ₹5 Lakh'},
+        {'key': '5l+',     'label': '₹5 Lakh +'},
+    ]
+    return render_template('design.html', styles=styles,
+                           room_types=ROOM_TYPES, budget_options=budget_options)
 
 @app.route('/ar')
 @login_required
@@ -109,15 +117,35 @@ def api_login():
 @login_required
 def api_analyze():
     style = request.form.get('style', 'modern')
+    room_type = request.form.get('room_type', 'Living Room')
+    budget_key = request.form.get('budget', '1l-2l')
     image_path = None
+
     if 'image' in request.files:
         f = request.files['image']
         if f and allowed(f.filename):
             fname = f"{uuid.uuid4().hex}_{secure_filename(f.filename)}"
             image_path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
             f.save(image_path)
-    suggestions = analyze_room(image_path, style)
-    design = Design(user_id=current_user.id, image_path=image_path or '',
+
+    # Step 1: Validate the image is a room
+    if image_path:
+        validation = validate_room_image(image_path)
+        if not validation.get('is_room', False):
+            return jsonify(
+                success=False,
+                is_room=False,
+                message=validation.get('message',
+                    'This does not appear to be a room interior. '
+                    'Please upload a clear photo of a room.')
+            )
+
+    # Step 2: Analyze room with budget constraints
+    suggestions = analyze_room(image_path, style, room_type, budget_key)
+
+    # Store in DB
+    db_path = os.path.basename(image_path) if image_path else ''
+    design = Design(user_id=current_user.id, image_path=db_path,
                     style=style, suggestions_json=json.dumps(suggestions))
     db.session.add(design); db.session.commit()
     return jsonify(success=True, design_id=design.id, suggestions=suggestions)
@@ -131,15 +159,32 @@ def api_buddy_chat():
     message, lang, design_id = d.get('message',''), d.get('lang','en'), d.get('design_id')
     result = buddy_chat(message, lang, current_user.id, design_id)
     if result.get('intent') == 'book' and result.get('furniture_name'):
-        item = Furniture.query.filter(
-            Furniture.name.ilike(f"%{result['furniture_name']}%")).first()
-        if item:
-            bk = Booking(user_id=current_user.id, furniture_id=item.id,
-                         design_id=design_id, status='confirmed')
-            db.session.add(bk); db.session.commit()
-            result['booking_confirmed'] = True
-            result['furniture'] = {'id': item.id, 'name': item.name,
-                                   'price': item.price, 'image_url': item.image_url}
+        fname = result['furniture_name']
+        item = Furniture.query.filter(Furniture.name.ilike(f"%{fname}%")).first()
+        
+        if not item:
+            item = Furniture(
+                name=fname.title(),
+                category="Suggested",
+                style_tags="ai-generated",
+                price=15000,
+                image_url="https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=400",
+                description="Custom AI suggested item"
+            )
+            for sugg in result.get('furniture_suggestions', []):
+                if fname.lower() in sugg.get('name', '').lower():
+                    item.price = sugg.get('price', item.price)
+                    item.image_url = sugg.get('image_url', item.image_url)
+                    break
+            db.session.add(item)
+            db.session.commit()
+
+        bk = Booking(user_id=current_user.id, furniture_id=item.id,
+                     design_id=design_id, status='confirmed')
+        db.session.add(bk); db.session.commit()
+        result['booking_confirmed'] = True
+        result['furniture'] = {'id': item.id, 'name': item.name,
+                               'price': item.price, 'image_url': item.image_url}
     return jsonify(result)
 
 @app.route('/api/voice/stt', methods=['POST'])
@@ -165,7 +210,7 @@ def api_stt():
 def api_tts():
     d = request.get_json()
     text, lang = d.get('text', ''), d.get('lang', 'en-IN')
-    speaker = {'hi-IN': 'meera', 'mr-IN': 'meera', 'en-IN': 'arvind'}.get(lang, 'meera')
+    speaker = {'hi-IN': 'anushka', 'mr-IN': 'anushka', 'en-IN': 'anushka'}.get(lang, 'anushka')
     try:
         headers = {'api-subscription-key': Config.SARVAM_API_KEY,
                    'Content-Type': 'application/json'}
