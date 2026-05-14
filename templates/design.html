@@ -351,7 +351,7 @@ function renderResults(s) {
       </div>
       <div class="frc-bottom">
         <span class="frc-style-tag">${f.style || currentStyle}</span>
-        <button class="btn-book-item" onclick="bookItem('${f.name.replace(/'/g, "\\'")}', ${f.price})">
+        <button class="btn-book-item" onclick="bookItem('${f.name.replace(/'/g, "\\'")}', ${f.price}, '${(f.category || '').replace(/'/g, "\\'")}', '${(f.style || currentStyle).replace(/'/g, "\\'")}', '${(f.desc || '').replace(/'/g, "\\'")}')">
           🛒 Book Now
         </button>
       </div>
@@ -393,21 +393,40 @@ function getCategoryIcon(cat) {
 }
 
 /* ── Booking ───────────────────────────────────────────── */
-async function bookItem(name, price) {
-  const res = await fetch('/api/furniture');
-  const items = await res.json();
-  const item = items.find(i => i.name.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
-  if (!item) {
-    showToast('Item not in catalog — ask AI Buddy to book!', 'error');
-    return;
+async function bookItem(name, price, category, style, desc) {
+  const btn = event.target;
+  const origText = btn.innerHTML;
+  btn.innerHTML = '⏳ Booking...';
+  btn.disabled = true;
+
+  try {
+    const r = await fetch('/api/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        furniture_name: name,
+        furniture_price: price,
+        furniture_category: category || 'AI Suggested',
+        furniture_style: style || currentStyle,
+        furniture_desc: desc || '',
+        design_id: currentDesignId
+      })
+    });
+    const d = await r.json();
+    if (d.success) {
+      btn.innerHTML = '✅ Booked!';
+      btn.style.background = 'rgba(16,185,129,0.3)';
+      btn.style.borderColor = '#10b981';
+    } else {
+      btn.innerHTML = origText;
+      btn.disabled = false;
+    }
+    showToast(d.message || d.error || '✅ Booked!', d.success ? 'success' : 'error');
+  } catch (e) {
+    btn.innerHTML = origText;
+    btn.disabled = false;
+    showToast('Network error — please try again', 'error');
   }
-  const r = await fetch('/api/book', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ furniture_id: item.id, design_id: currentDesignId })
-  });
-  const d = await r.json();
-  showToast(d.message || '✅ Booked!', d.success ? 'success' : 'error');
 }
 
 /* ── Drag-and-drop ─────────────────────────────────────── */

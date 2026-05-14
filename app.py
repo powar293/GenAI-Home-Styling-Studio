@@ -231,9 +231,33 @@ def api_tts():
 @login_required
 def api_book():
     d = request.get_json()
-    item = Furniture.query.get(d.get('furniture_id'))
+    item = None
+
+    # Try finding by furniture_id first
+    if d.get('furniture_id'):
+        item = Furniture.query.get(d.get('furniture_id'))
+
+    # If not found, try by name (for AI-suggested items from Design Studio)
+    if not item and d.get('furniture_name'):
+        fname = d['furniture_name']
+        item = Furniture.query.filter(Furniture.name.ilike(f"%{fname}%")).first()
+
+        # Auto-create the item if it doesn't exist in catalog
+        if not item:
+            item = Furniture(
+                name=fname.title(),
+                category=d.get('furniture_category', 'AI Suggested'),
+                style_tags=d.get('furniture_style', 'ai-generated'),
+                price=d.get('furniture_price', 0),
+                image_url="https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=400",
+                description=d.get('furniture_desc', 'AI suggested item from Design Studio')
+            )
+            db.session.add(item)
+            db.session.commit()
+
     if not item:
         return jsonify(success=False, error='Furniture not found')
+
     bk = Booking(user_id=current_user.id, furniture_id=item.id,
                  design_id=d.get('design_id'), status='confirmed')
     db.session.add(bk); db.session.commit()
