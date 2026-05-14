@@ -351,7 +351,7 @@ function renderResults(s) {
       </div>
       <div class="frc-bottom">
         <span class="frc-style-tag">${f.style || currentStyle}</span>
-        <button class="btn-book-item" onclick="bookItem('${f.name.replace(/'/g, "\\'")}', ${f.price}, '${(f.category || '').replace(/'/g, "\\'")}', '${(f.style || currentStyle).replace(/'/g, "\\'")}', '${(f.desc || '').replace(/'/g, "\\'")}')">
+        <button class="btn-book-item" onclick="bookItem(this, '${f.name.replace(/'/g, "\\\\'")}', ${f.price}, '${(f.category || '').replace(/'/g, "\\\\'")}', '${(f.style || currentStyle).replace(/'/g, "\\\\'")}', '${(f.desc || '').replace(/'/g, "\\\\'")}')">
           🛒 Book Now
         </button>
       </div>
@@ -393,8 +393,7 @@ function getCategoryIcon(cat) {
 }
 
 /* ── Booking ───────────────────────────────────────────── */
-async function bookItem(name, price, category, style, desc) {
-  const btn = event.target;
+async function bookItem(btn, name, price, category, style, desc) {
   const origText = btn.innerHTML;
   btn.innerHTML = '⏳ Booking...';
   btn.disabled = true;
