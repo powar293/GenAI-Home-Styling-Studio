@@ -210,7 +210,7 @@ def api_stt():
 def api_tts():
     d = request.get_json()
     text, lang = d.get('text', ''), d.get('lang', 'en-IN')
-    speaker = {'hi-IN': 'anushka', 'mr-IN': 'anushka', 'en-IN': 'anushka'}.get(lang, 'anushka')
+    speaker = {'hi-IN': 'aditya', 'mr-IN': 'aditya', 'en-IN': 'aditya'}.get(lang, 'aditya')
     try:
         headers = {'api-subscription-key': Config.SARVAM_API_KEY,
                    'Content-Type': 'application/json'}
