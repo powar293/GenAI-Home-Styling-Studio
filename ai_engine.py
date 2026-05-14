@@ -360,8 +360,14 @@ def buddy_chat(message: str, lang: str, user_id: int, design_id=None) -> dict:
         return _parse_json(response.text)
     except Exception as exc:
         print(f"[ai_engine] buddy_chat error: {exc}")
+        error_msg = str(exc)
+        if "429" in error_msg or "quota" in error_msg.lower():
+            fallback_text = "I am receiving too many requests right now and my Google API quota is exceeded. Please wait a minute and try again!"
+        else:
+            fallback_text = BUDDY_FALLBACK.get(lang, BUDDY_FALLBACK["en"])
+            
         return {
-            "response": BUDDY_FALLBACK.get(lang, BUDDY_FALLBACK["en"]),
+            "response": fallback_text,
             "intent": "chat",
             "furniture_name": None,
             "furniture_suggestions": [],
