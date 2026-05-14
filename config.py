@@ -7,5 +7,5 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
 
-    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AIzaSyAcmW1rk0RuNdniNqaJQesIiQUzblafxfs')
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AIzaSyAOnfr3CzHP9s3i7u5rgqUGZ4i6L4bRPEk')
     SARVAM_API_KEY = os.environ.get('SARVAM_API_KEY', 'sk_tlnqgzth_CZqeWKV4bzznLtqcYETzkQUs')

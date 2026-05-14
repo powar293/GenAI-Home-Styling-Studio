@@ -114,7 +114,6 @@
         <div class="ls-item active" id="ls-validate">✓ Validating room image</div>
         <div class="ls-item" id="ls-analyze">⏳ Analyzing room layout</div>
         <div class="ls-item" id="ls-furniture">⏳ Matching furniture to budget</div>
-        <div class="ls-item" id="ls-visual">⏳ Generating visualization</div>
       </div>
     </div>
 
@@ -129,17 +128,7 @@
     <!-- AI Results -->
     <div class="studio-ai-results hidden" id="ai-results">
 
-      <!-- Generated Room Visualization -->
-      <div class="result-visual-card" id="res-visual-container">
-        <span class="visual-badge">✨ AI Furnished Visualization</span>
-        <div class="visual-img-wrap">
-          <img id="res-visual-img" src="" alt="AI Design Suggestion"/>
-          <div class="visual-loading-overlay" id="visual-loading">
-            <div class="loading-spinner small"></div>
-            <span>Generating furnished room…</span>
-          </div>
-        </div>
-      </div>
+      <!-- Generated Room Visualization (Removed) -->
 
       <!-- Room Info Header -->
       <div class="result-info-bar">
@@ -248,7 +237,7 @@ function showLoading() {
   document.getElementById('results-loading').classList.remove('hidden');
 
   // Animate the steps
-  const steps = ['ls-validate', 'ls-analyze', 'ls-furniture', 'ls-visual'];
+  const steps = ['ls-validate', 'ls-analyze', 'ls-furniture'];
   steps.forEach((id, i) => {
     const el = document.getElementById(id);
     el.className = 'ls-item' + (i === 0 ? ' active' : '');
@@ -342,28 +331,7 @@ function renderResults(s) {
   };
   document.getElementById('res-budget-tag').textContent = budgetLabels[currentBudget] || '';
 
-  // Visual suggestion image
-  const vsImg = document.getElementById('res-visual-img');
-  const vsLoading = document.getElementById('visual-loading');
-  if (s.visual_suggestion_url) {
-    vsImg.style.opacity = '0';
-    vsLoading.classList.remove('hidden');
-    vsImg.src = s.visual_suggestion_url;
-
-    const vsTimeout = setTimeout(() => {
-      vsImg.src = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1080&h=720&q=80';
-    }, 20000);
-
-    vsImg.onload = () => {
-      clearTimeout(vsTimeout);
-      vsLoading.classList.add('hidden');
-      vsImg.style.opacity = '1';
-    };
-    vsImg.onerror = () => {
-      clearTimeout(vsTimeout);
-      vsImg.src = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1080&h=720&q=80';
-    };
-  }
+  // Visual suggestion image (Removed)
 
   // Furniture cards
   const fl = document.getElementById('furniture-list');
