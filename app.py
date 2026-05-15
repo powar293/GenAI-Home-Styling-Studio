@@ -1,4 +1,4 @@
-import os, json, uuid
+import os, json, uuid, re
 import requests as http_req
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -95,6 +95,11 @@ def api_register():
     username, email, password = d.get('username','').strip(), d.get('email','').strip(), d.get('password','')
     if not all([username, email, password]):
         return jsonify(success=False, message='All fields are required.')
+        
+    password_regex = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$')
+    if not password_regex.match(password):
+        return jsonify(success=False, message='Password must be at least 8 chars long, include uppercase, lowercase, digit, and special symbol.')
+        
     if User.query.filter_by(email=email).first():
         return jsonify(success=False, message='Email already registered.')
     user = User(username=username, email=email, password_hash=generate_password_hash(password))
